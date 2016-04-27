@@ -37,6 +37,7 @@ class CatNode: SKSpriteNode, CustomNodeEvents {
     }
     
     func curlAt(scenePoint: CGPoint) {
+        print("current rotation \(parent!.zRotation)")
         parent!.physicsBody = nil
         for child in children {
             child.removeFromParent()
@@ -47,13 +48,13 @@ class CatNode: SKSpriteNode, CustomNodeEvents {
         let catCurl = SKSpriteNode(fileNamed: "CatCurl")!.childNodeWithName("cat_curl")
         catCurl?.moveToParent(self)
         catCurl?.position = CGPoint(x: -30, y: 100)
-        
+
         var localPoint = parent!.convertPoint(scenePoint, fromNode: scene!)
         localPoint.y += frame.size.height/3
         
         runAction(SKAction.group([
             SKAction.moveTo(localPoint, duration: 0.66),
-            SKAction.rotateToAngle(0, duration: 0.5)
+            SKAction.rotateToAngle(-parent!.zRotation, duration: 0.5)
             ]))
     }
 }
