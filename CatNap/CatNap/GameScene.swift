@@ -23,6 +23,8 @@ struct PhysicsCategory {
     static let Bed: UInt32 = 0b100 // 4
     static let Edge: UInt32 = 0b1000 // 8
     static let Label: UInt32 = 0b10000 // 16
+    static let Spring: UInt32 = 0b100000 // 32
+    static let Hook: UInt32 = 0b1000000 // 64
 }
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
@@ -31,6 +33,15 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var catNode: CatNode!
     var playable = true
     var bounceCount = 0
+    var currentLevel: Int = 0
+    var hookNode: HookNode?
+    
+    class func level(levelNum: Int) -> GameScene? {
+        let scene = GameScene(fileNamed: "Level\(levelNum)")!
+        scene.currentLevel = levelNum
+        scene.scaleMode = .AspectFill
+        return scene
+    }
     
     override func didMoveToView(view: SKView) {
         let maxAspectRatio: CGFloat = 16.0/9.0
@@ -52,6 +63,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         })
         
         SKTAudio.sharedInstance().playBackgroundMusic("backgroundMusic.mp3")
+        
+        hookNode = childNodeWithName("hookBase") as? HookNode
     }
     
     override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
@@ -60,6 +73,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
    
     override func update(currentTime: CFTimeInterval) {
         /* Called before each frame is rendered */
+    }
+    
+    override func didSimulatePhysics() {
+        if playable && hookNode?.isHooked != true {
+            if fabs(catNode.parent!.zRotation) > CGFloat(25).degreesToRadians() {
+                lose()
+            }
+        }
     }
     
     func didBeginContact(contact: SKPhysicsContact) {
@@ -71,9 +92,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 win()
             }
             else if collision == PhysicsCategory.Cat | PhysicsCategory.Edge {
-                playable = false
                 print("FAIL")
                 lose()
+            }
+            else if collision == PhysicsCategory.Cat | PhysicsCategory.Hook && hookNode?.isHooked == false {
+                hookNode!.hookCat(catNode)
             }
         }
         else {
@@ -98,12 +121,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     func newGame() {
-        let scene = GameScene(fileNamed:"GameScene")
-        scene!.scaleMode = scaleMode
-        view!.presentScene(scene)
+        view!.presentScene(GameScene.level(currentLevel))
     }
     
     func lose() {
+        playable = false
         // 1
         SKTAudio.sharedInstance().pauseBackgroundMusic()
         runAction(SKAction.playSoundFileNamed("lose.mp3", waitForCompletion: false))
