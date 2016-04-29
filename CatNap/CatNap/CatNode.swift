@@ -12,6 +12,8 @@ import SpriteKit
 let kCatTappedNotification = "kCatTappedNotification"
 
 class CatNode: SKSpriteNode, CustomNodeEvents, InteractiveNode {
+    private var isDoingTheDance = false
+    
     func didMoveToScene() {
         print("cat added to scene")
         let catBodyTexture = SKTexture(imageNamed: "cat_body_outline")
@@ -30,6 +32,21 @@ class CatNode: SKSpriteNode, CustomNodeEvents, InteractiveNode {
     
     func interact() {
         NSNotificationCenter.defaultCenter().postNotificationName(kCatTappedNotification, object: nil)
+        
+        if DiscoBallNode.isDiscoTime && !isDoingTheDance {
+            isDoingTheDance = true
+            
+            // add dance!
+            let move = SKAction.sequence([
+                SKAction.moveByX(80, y: 0, duration: 0.5),
+                SKAction.waitForDuration(0.5),
+                SKAction.moveByX(-30, y: 0, duration: 0.5)
+                ])
+            let dance = SKAction.repeatAction(move, count: 3)
+            parent!.runAction(dance, completion: {
+                self.isDoingTheDance = false
+            })
+        }
     }
     
     func wakeUp() {

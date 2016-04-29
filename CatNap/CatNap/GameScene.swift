@@ -126,6 +126,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func lose() {
         playable = false
+        
+//        if currentLevel > 1 {
+//            currentLevel -= 1
+//        }
+        
         // 1
         SKTAudio.sharedInstance().pauseBackgroundMusic()
         runAction(SKAction.playSoundFileNamed("lose.mp3", waitForCompletion: false))
@@ -142,6 +147,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func win() {
         playable = false
+        
+        if currentLevel < 6 {
+            currentLevel += 1
+        }
         
         SKTAudio.sharedInstance().pauseBackgroundMusic()
         runAction(SKAction.playSoundFileNamed("win.mp3", waitForCompletion: false))
