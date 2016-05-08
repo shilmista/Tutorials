@@ -8,18 +8,19 @@
 
 import SpriteKit
 import CoreMotion
+import GameplayKit
+
+struct PhysicsCategory {
+    static let None: UInt32 = 0
+    static let Player: UInt32 = 0b1
+    static let PlatformNormal: UInt32 = 0b10
+    static let PlatformBreakable: UInt32 = 0b100
+    static let CoinNormal: UInt32 = 0b1000
+    static let CoinSpecial: UInt32 = 0b10000
+    static let Edges:UInt32 = 0b100000
+}
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
-    
-    struct PhysicsCategory {
-        static let None: UInt32 = 0
-        static let Player: UInt32 = 0b1
-        static let PlatformNormal: UInt32 = 0b10
-        static let PlatformBreakable: UInt32 = 0b100
-        static let CoinNormal: UInt32 = 0b1000
-        static let CoinSpecial: UInt32 = 0b10000
-        static let Edges:UInt32 = 0b100000
-    }
     // MARK: - Properties
     var bgNode = SKNode()
     var fgNode = SKNode()
@@ -34,7 +35,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var lastItemPosition = CGPointZero
     var lastItemHeight: CGFloat = 0.0
     var levelY: CGFloat = 0.0
-    var isPlaying: Bool = false
     
     let motionManager = CMMotionManager()
     var xAcceleration = CGFloat(0)
@@ -43,14 +43,20 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     var lastUpdateTimeInterval: NSTimeInterval = 0
     var deltaTime: NSTimeInterval = 0
+    var lives = 3
+    
+    lazy var gameState: GKStateMachine = GKStateMachine(states: [WaitingForTap(scene: self), WaitingForBomb(scene: self), Playing(scene: self), GameOver(scene:self)])
+    lazy var playerState: GKStateMachine = GKStateMachine(states: [PlayerIdle(scene: self), PlayerJump(scene: self), PlayerFall(scene: self), PlayerInLava(scene: self), PlayerDead(scene: self)])
     
     override func didMoveToView(view: SKView) {
         setupNodes()
         setupLevel()
-        setupPlayer()
         setupCoreMotion()
         physicsWorld.contactDelegate = self
         setCameraPosition(CGPoint(x: size.width/2, y: size.height/2))
+        
+        gameState.enterState(WaitingForTap)
+        playerState.enterState(PlayerIdle)
     }
     
     override func update(currentTime: NSTimeInterval) {
@@ -64,13 +70,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         // 2
         if paused { return }
         // 3
-        if isPlaying == true {
-            updateCamera()
-            updatePlayer()
-            updateLava(deltaTime)
-            updateCollisionLava()
-            updateLevel()
-        }
+        gameState.updateWithDeltaTime(deltaTime)
     }
     
     func setupNodes() {
@@ -108,14 +108,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         while lastItemPosition.y < levelY {
             addRandomOverlayNode()
         }
-    }
-    
-    func setupPlayer() {
-        player.physicsBody = SKPhysicsBody(circleOfRadius: player.size.width * 0.3)
-        player.physicsBody!.dynamic = false
-        player.physicsBody!.allowsRotation = false
-        player.physicsBody!.categoryBitMask = PhysicsCategory.Player
-        player.physicsBody!.collisionBitMask = 0
     }
     
     func setupCoreMotion() {
@@ -181,29 +173,20 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
-        if !isPlaying {
-            bombDrop()
+        switch gameState.currentState {
+            case is WaitingForTap:
+                gameState.enterState(WaitingForBomb)
+                self.runAction(SKAction.waitForDuration(2.0), completion: {
+                    self.gameState.enterState(Playing)
+                })
+            case is GameOver:
+                let newScene = GameScene(fileNamed: "GameScene")
+                newScene!.scaleMode = .AspectFill
+                let reveal = SKTransition.flipVerticalWithDuration(0.5)
+                self.view?.presentScene(newScene!, transition: reveal)
+            default:
+            break
         }
-    }
-    
-    func bombDrop() {
-        let scaleUp = SKAction.scaleTo(1.25, duration: 0.25)
-        let scaleDown = SKAction.scaleTo(1.0, duration: 0.25)
-        let sequence = SKAction.sequence([scaleUp, scaleDown])
-        let repeatSeq = SKAction.repeatActionForever(sequence)
-        fgNode.childNodeWithName("Bomb")!.runAction(SKAction.unhide())
-        fgNode.childNodeWithName("Bomb")!.runAction(repeatSeq)
-        runAction(SKAction.sequence([SKAction.waitForDuration(2),
-            SKAction.runBlock(startGame)
-            ]))
-    }
-    
-    func startGame() {
-        fgNode.childNodeWithName("Title")!.removeFromParent()
-        fgNode.childNodeWithName("Bomb")!.removeFromParent()
-        isPlaying = true
-        player.physicsBody!.dynamic = true
-        superBoostPlayer()
     }
     
     func setPlayerVelocity(amount:CGFloat) {
@@ -277,6 +260,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 -player.size.width/2, y: 0.0), toNode: fgNode)
             player.position.x = playerPosition.x
         }
+        
+        if player.physicsBody?.velocity.dy > 0 {
+            playerState.enterState(PlayerJump)
+        }
+        else {
+            playerState.enterState(PlayerFall)
+        }
     }
     
     func overlapAmount() -> CGFloat {
@@ -331,7 +321,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func updateCollisionLava() {
         if player.position.y < lava.position.y + 90 {
-            boostPlayer()
+            playerState.enterState(PlayerInLava)
+            if lives <= 0 {
+                playerState.enterState(PlayerDead)
+                gameState.enterState(GameOver)
+            }
         }
     }
     
