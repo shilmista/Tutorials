@@ -33,6 +33,8 @@ class WaitingForBomb: GKState {
                 SKAction.unhide())
             scene.fgNode.childNodeWithName("Bomb")!.runAction(
                 repeatSeq)
+            scene.runAction(scene.soundBombDrop)
+            scene.runAction(SKAction.repeatAction(scene.soundTickTock, count: 2))
         }
     }
     
@@ -41,7 +43,14 @@ class WaitingForBomb: GKState {
     }
     override func willExitWithNextState(nextState: GKState) {
         if nextState is Playing {
-            scene.fgNode.childNodeWithName("Bomb")!.removeFromParent()
+            let bomb = scene.fgNode.childNodeWithName("Bomb")!
+            let explosion = scene.explosion(2.0)
+            explosion.position = bomb.position
+            scene.fgNode.addChild(explosion)
+            bomb.removeFromParent()
+            scene.runAction(scene.soundExplosions[3])
+            
+            scene.screenShakeByAmt(100)
         }
     }
 }

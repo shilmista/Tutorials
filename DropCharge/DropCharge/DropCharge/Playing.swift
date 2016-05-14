@@ -20,6 +20,7 @@ class Playing: GKState {
         if previousState is WaitingForBomb {
             scene.player.physicsBody!.dynamic = true
             scene.superBoostPlayer()
+            scene.playBackgroundMusic("bgMusic.mp3")
         }
     }
     
@@ -29,6 +30,8 @@ class Playing: GKState {
         scene.updatePlayer()
         scene.updateLava(seconds)
         scene.updateCollisionLava()
+        scene.updateExplosions(seconds)
+        scene.updateRedAlert(seconds)
     }
     
     override func isValidNextState(stateClass: AnyClass) -> Bool {

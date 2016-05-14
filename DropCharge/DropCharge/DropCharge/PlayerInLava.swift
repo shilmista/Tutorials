@@ -20,8 +20,21 @@ class PlayerInLava: GKState {
     }
     
     override func didEnterWithPreviousState(previousState: GKState?) {
+        scene.playerTrail.particleBirthRate = 0
+        SKTAudio.sharedInstance().playSoundEffect("DrownFireBug.mp3")
+        
+        let smokeTrail = scene.addTrail("SmokeTrail")
+        scene.runAction(SKAction.sequence([
+            SKAction.waitForDuration(3.0),
+            SKAction.runBlock() {
+                self.scene.removeTrail(smokeTrail)
+            }
+            ]))
+        
         scene.boostPlayer()
         scene.lives -= 1
+                
+        scene.screenShakeByAmt(50)
     }
     
     override func isValidNextState(stateClass: AnyClass) -> Bool {

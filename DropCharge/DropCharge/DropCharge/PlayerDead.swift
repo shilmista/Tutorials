@@ -18,6 +18,10 @@ class PlayerDead: GKState {
         self.scene = scene as! GameScene
         super.init()
     }
+
+    override func didEnterWithPreviousState(previousState: GKState?) {
+        scene.runAction(scene.soundGameOver)
+    }
     
     override func isValidNextState(stateClass: AnyClass) -> Bool {
         return stateClass is PlayerIdle.Type

@@ -17,6 +17,7 @@ class GameOver: GKState {
     
     override func didEnterWithPreviousState(previousState: GKState?) {
         if previousState is Playing {
+            scene.playBackgroundMusic("SpaceGame.caf")
             scene.physicsWorld.contactDelegate = nil
             scene.player.physicsBody?.dynamic = false
             let moveUpAction = SKAction.moveByX(0,
@@ -32,6 +33,12 @@ class GameOver: GKState {
             gameOver.position = scene.getCameraPosition()
             gameOver.zPosition = 10
             scene.addChild(gameOver)
+            
+            let explosion = scene.explosion(3.0)
+            explosion.position = gameOver.position
+            explosion.zPosition = 11
+            scene.addChild(explosion)
+            scene.runAnim(scene.soundExplosions[3])
         }
     }
     

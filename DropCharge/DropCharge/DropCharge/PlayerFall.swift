@@ -19,6 +19,10 @@ class PlayerFall: GKState {
         super.init()
     }
     
+    override func didEnterWithPreviousState(previousState: GKState?) {
+        scene.runAnim(scene.animFall)
+    }
+    
     override func isValidNextState(stateClass: AnyClass) -> Bool {
         return stateClass is PlayerInLava.Type || stateClass is PlayerJump.Type
     }
